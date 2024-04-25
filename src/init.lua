@@ -15,15 +15,63 @@ type Promise<T...> = {
 }
 
 --[=[
-    @class Dispatcher
+	@class Dispatcher
 
-    The class responsible for handling and dispatching workers.
+	Responsible for handling and dispatching workers. 
+	This should never be created by a worker or in parallel.
+
+	```lua
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+	local workerTemplate = script.Worker
+	local numWorkers = 64
+
+	local ComputeLua = require(ReplicatedStorage.ComputeLua)
+	local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, workerTemplate)
+	```
 ]=]
 local Dispatcher = {}
 Dispatcher.__index = Dispatcher
 
 local SHARED_TABLE_PREFIX = "ComputeLua-"
-local VARIABLE_BUFFER_NAME = SHARED_TABLE_PREFIX.."VARIABLE_BUFFER"
+
+--[=[
+	@type BufferDataType Vector2 | Vector3 | CFrame | Color3 | UDim | UDim2 | number | boolean | string
+	@within Dispatcher
+	The only data types allowed in buffers, Compute or Variable
+]=]
+--[=[
+	@type BufferDataType Vector2 | Vector3 | CFrame | Color3 | UDim | UDim2 | number | boolean | string
+	@within ComputeBuffer
+	The only data types allowed in buffers, Compute or Variable
+]=]
+--[=[
+	@type BufferDataType Vector2 | Vector3 | CFrame | Color3 | UDim | UDim2 | number | boolean | string
+	@within ComputeLua
+	The only data types allowed in buffers, Compute or Variable
+]=]
+
+--[=[
+	@type ComputeBufferDataType { [number]: BufferDataType | ComputeBufferDataType }
+	@within ComputeBuffer
+	Type for the data of a ComputeBuffer
+]=]
+--[=[
+	@type VariableBufferDataType { [number]: BufferDataType }
+	@within Dispatcher
+	Type for the data of the VariableBuffer
+]=]
+
+--[=[
+	@type ComputeBufferDataType { [number]: BufferDataType | ComputeBufferDataType }
+	@within ComputeLua
+	Type for the data of a ComputeBuffer
+]=]
+--[=[
+	@type VariableBufferDataType { [number]: BufferDataType }
+	@within ComputeLua
+	Type for the data of the VariableBuffer
+]=]
 
 export type BufferDataType = Vector2 | Vector3 | CFrame | Color3 | UDim | UDim2 | number | boolean | string
 export type ComputeBufferDataType = {[number]: BufferDataType | ComputeBufferDataType}
@@ -39,10 +87,51 @@ type DispatcherSelf = {
 	workerRemote: BindableEvent,
 	variableBuffer: VariableBufferDataType,
 
-	Dispatch: (self: Dispatcher, numThreads: number, thread: string, randomDispatch: boolean) -> Promise,
-	SetVariableBuffer: (self: Dispatcher, variableBuffer: VariableBufferDataType) -> (),
+	Dispatch: (self: Dispatcher, numThreads: number, thread: string, useSerialDispatch: boolean?) -> Promise,
+	SetVariableBuffer: (self: Dispatcher, bufferData: VariableBufferDataType) -> (),
 	Destroy: (self: Dispatcher) -> ()
 }
+--[=[
+	@prop numWorkers number
+	@within Dispatcher
+	@readonly
+	How many workers this Dispatcher has
+]=]
+--[=[
+	@prop variableBuffer VariableBufferDataType
+	@within Dispatcher
+	@readonly
+	@private
+	The current VariableBuffer data
+]=]
+--[=[
+	@prop worker Script | LocalScript
+	@within Dispatcher
+	@readonly
+	@private
+	The worker template
+]=]
+--[=[
+	@prop workerFolder Folder
+	@within Dispatcher
+	@readonly
+	@private
+	The worker holder folder
+]=]
+--[=[
+	@prop workers {Actor}
+	@within Dispatcher
+	@readonly
+	@private
+	The workers' actors
+]=]
+--[=[
+	@prop workerRemote BindableEvent
+	@within Dispatcher
+	@readonly
+	@private
+	The remote that a worker calls when it finished working
+]=]
 
 export type ComputeLua = {
 	CreateDispatcher: (numWorkers: number, worker: Script | LocalScript) -> Dispatcher,
@@ -101,6 +190,16 @@ local function doesVariableBufferHaveCorrectTyping(variableBuffer: VariableBuffe
 	return checkTable(variableBuffer)
 end
 
+--[=[
+	Create a Dispatcher
+	@since v1.0.0
+	@tag Parallel Unsafe
+	@private
+
+	@param numWorkers number -- How many workers to create
+	@param worker Script | LocalScript -- The worker template to use
+	@return Dispatcher
+]=]
 function Dispatcher._new(numWorkers: number, worker: Script | LocalScript): Dispatcher
 	assert(type(numWorkers) == "number", "numWorkers must be a number")
 	assert(typeof(worker) == "Instance", "worker must be an Instance")
@@ -137,28 +236,26 @@ function Dispatcher._new(numWorkers: number, worker: Script | LocalScript): Disp
 	return self
 end
 
---[[
-	Dispatch a thread to the workers. Use this to get the workers to do a job, 
-	this should only be called in serial context by a non-worker
-	
-	@param numThreads How many times to run a worker, this cannot exceed the number of workers. 
-						Match the size of the compute buffer if you are using a compute buffer
-	@param thread The name of the thread to run, this will match the BindToMessageParallel() message name
-	@param randomDispatch **NOT RECOMMENDED UNLESS YOU KNOW WHAT YOU ARE DOING** Defaults to 'true'
-							When false, it ensures that every worker is called only once, 
-							this is useful if you want only one worker doing one job
-	@returns Promise
---]]
-function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: string, randomDispatch: boolean?): Promise
+--[=[
+	Dispatch a number of threads to the workers
+	@since v1.0.0
+	@tag Parallel Unsafe
+
+	@param numThreads number -- How many workers will be invoked to run their code. If using serial dispatch, this cannot exceed the number of workers. Try to match the size of data you are going to process if you are not using a serial dispatch.
+	@param thread string -- The name of the thread to dispatch, this is the same name as the one in the workers
+	@param useSerialDispatch boolean? -- **NOT RECOMMENDED UNLESS YOU KNOW WHAT YOU ARE DOING** Default to 'true'. This will cause every worker to only be called once.
+	@return Promise
+]=]
+function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: string, useSerialDispatch: boolean?): Promise
 	assert(type(numThreads) == "number", "numThreads must be a number")
 	assert(type(thread) == "string", "thread must be a string")
-	if randomDispatch == nil then
-		randomDispatch = true
+	if useSerialDispatch == nil then
+		useSerialDispatch = false
 	end
-	assert(type(randomDispatch) == "boolean", "randomDispatch must be a boolean")
+	assert(type(useSerialDispatch) == "boolean", "useSerialDispatch must be a boolean")
 
-	if not randomDispatch then
-		assert(numThreads <= self.numWorkers, "numThreads cannot exceed numWorkers if not using random dispatch")
+	if not useSerialDispatch then
+		assert(numThreads <= self.numWorkers, "numThreads cannot exceed numWorkers if using a serial dispatch")
 	end
 
 	local workersFinished = 0
@@ -185,7 +282,7 @@ function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: strin
 		local variableBufferShared = SharedTable.cloneAndFreeze(SharedTable.new(self.variableBuffer), true)
 		
 		for i = 1, numThreads do
-			if randomDispatch then
+			if not useSerialDispatch then
 				self.workers[self.rand:NextInteger(1, self.numWorkers)]:SendMessage(thread, i, self.workerRemote, variableBufferShared)
 			else
 				self.workers[i]:SendMessage(thread, i, self.workerRemote, variableBufferShared)
@@ -207,23 +304,23 @@ function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: strin
 	end)
 end
 
---[[
-	Set the variable buffer data to send to the workers, this should only be called in serial context by a non-worker
-	Only certain types are allowed to be sent to workers
-	Vector2 | Vector3 | CFrame | Color3 | UDim | UDim2 | number | boolean | string
-	And the only type of index the data can use is a number. 
-	
-	@param variableBuffer The list of variable elements
---]]
-function Dispatcher.SetVariableBuffer(self: Dispatcher, variableBuffer: VariableBufferDataType): ()
-	assert(doesVariableBufferHaveCorrectTyping(variableBuffer), "variableData must have only elements that are acceptable variable buffer types")
-	self.variableBuffer = variableBuffer
+--[=[
+	Set the data of the SetVariableBuffer for this Dispatcher. Be careful to only call this when no workers are working
+	@since v1.0.0
+	@tag Parallel Unsafe
+
+	@param bufferData VariableBufferDataType -- The data to set the variable buffer to.
+]=]
+function Dispatcher.SetVariableBuffer(self: Dispatcher, bufferData: VariableBufferDataType): ()
+	assert(doesVariableBufferHaveCorrectTyping(bufferData), "variableData must have only elements that are acceptable variable buffer types")
+	self.variableBuffer = bufferData
 end
 
---[[
-	Make sure to call this when you are done using the Dispatcher
-	It will get rid of all the workers
---]]
+--[=[
+	The cleanup function for a Dispatcher. This is important to call to free up memory
+	@since v1.0.0
+	@tag Parallel Unsafe
+]=]
 function Dispatcher.Destroy(self: Dispatcher): ()
 	for i = 1, self.numWorkers do
 		self.workers[i]:Destroy()
@@ -234,6 +331,38 @@ function Dispatcher.Destroy(self: Dispatcher): ()
 	table.freeze(self)
 end
 
+--[=[
+	@class ComputeBuffer
+
+	Data storage to be sent over to the workers.
+
+	```lua
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+	local ComputeLua = require(ReplicatedStorage.ComputeLua)
+
+	local computeBuffer = ComputeLua.CreateComputeBuffer("PositionBuffer")
+	computeBuffer:SetData({
+		Vector3.zero,
+		Vector3.new(5, 1, 2),
+		Vector3.yAxis,
+		Vector3.zAxis
+	})
+	```
+]=]
+--[=[
+	@prop name string
+	@within ComputeBuffer
+	@readonly
+	The name of the buffer.
+]=]
+--[=[
+	@prop _bufferName string
+	@within ComputeBuffer
+	@readonly
+	@private
+	The extended name of the buffer, used to define the SharedTable ID.
+]=]
 local ComputeBuffer = {}
 ComputeBuffer.__index = ComputeBuffer
 
@@ -247,6 +376,15 @@ type ComputeBufferSelf = {
 	Clean: (self: ComputeBuffer) -> (),
 }
 
+--[=[
+	Create a ComputeBuffer
+	@since v1.0.0
+	@tag Parallel Unsafe
+	@private
+
+	@param name string -- Name of the buffer
+	@return ComputeBuffer
+]=]
 function ComputeBuffer._new(name: string): ComputeBuffer
 	assert(type(name) == "string", "bufferName must be a string")
 
@@ -256,25 +394,25 @@ function ComputeBuffer._new(name: string): ComputeBuffer
 	return self
 end
 
---[[
-	Get the data of the Compute Buffer, this should only be called in serial context by a non-worker
-	
-	@returns SharedTable The data of the buffer, this is a read-only table
---]]
+--[=[
+	Get the data of the ComputeBuffer
+	@since v1.0.0
+	@tag Parallel Unsafe
+
+	@return ComputeBufferDataType -- The data of the buffer, a read-only table
+]=]
 function ComputeBuffer.GetData(self: ComputeBuffer): SharedTable
 	local data = SharedTableRegistry:GetSharedTable(self._bufferName)
 	return SharedTable.cloneAndFreeze(data, true)
 end
 
---[[
-	Set the data of the Compute Buffer, this should only be called in serial context by a non-worker
-	Only certain types are allowed to be sent to workers
-	Vector2 | Vector3 | CFrame | Color3 | UDim | UDim2 | number | boolean | string
-	And the only type of index the data can use is a number. 
-	Each worker will use it's dispatch ID to figure out which one it is working on
-	
-	@param bufferData The data to set the buffer with, only certain types is allowed to be in this table
---]]
+--[=[
+	Set the data of the ComputeBuffer. Be careful to only call this when no workers are working
+	@since v1.0.0
+	@tag Parallel Unsafe
+
+	@param bufferData ComputeBufferDataType -- The data to set the buffer with, only certain data types are allowed.
+]=]
 function ComputeBuffer.SetData(self: ComputeBuffer, bufferData: ComputeBufferDataType): ()
 	assert(doesComputeBufferDataHaveCorrectTyping(bufferData), "bufferData must have only elements that are acceptable compute buffer types")
 
@@ -282,60 +420,77 @@ function ComputeBuffer.SetData(self: ComputeBuffer, bufferData: ComputeBufferDat
 	SharedTableRegistry:SetSharedTable(self._bufferName, sharedTable)
 end
 
---[[
-	Make sure to call this when you are done using the buffer. 
-	This cleans up all the memory it is using
---]]
+--[=[
+	The cleanup function for a ComputeBuffer. This is important to call to free up memory
+	@since v1.0.0
+	@tag Parallel Unsafe
+]=]
 function ComputeBuffer.Clean(self: ComputeBuffer): ()
 	SharedTableRegistry:SetSharedTable(self._bufferName, nil)
 	table.clear(self)
 	table.freeze(self)
 end
 
+--[=[
+	@class ComputeLua
+
+	Main module for ComputeLua, holds all the functions to manage ComputeBuffers, Dispatchers, threads, and more.
+
+	```lua
+	local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+	local ComputeLua = require(ReplicatedStorage.ComputeLua)
+	```
+]=]
 local ComputeLua: ComputeLua = {}
 
---[[
+--[=[
 	Create a Dispatcher to run a bunch of workers in parallel
-	
-	@param numWorkers The amount of workers to use, balance this with performance and speed
-	@param worker The script to use as a template for the worker. This must be a Script or LocalScript, 
-					this is also the parent of the workers so the worker should be able to run in its current location
-	@returns Dispatcher
---]]
+	@since v1.0.0
+	@tag Parallel Unsafe
+
+	@param numWorkers number -- How many workers to use, balanced this with performance and speed
+	@param worker Script | LocalScript -- The template script to clone as the worker
+	@return Dispatcher
+]=]
 function ComputeLua.CreateDispatcher(numWorkers: number, worker: Script | LocalScript): Dispatcher
 	return Dispatcher._new(numWorkers, worker)
 end
 
---[[
-	Create a Compute Buffer which stores data that is sent to each worker
-	Every element a part of the buffer's data must be of certain types, more information about the types at ComputeBuffer.SetData()
-	This should never be called while in parallel context or within a worker
-	
-	@param bufferName The name of the Compute Buffer, this must match whatever the worker is going to use
-	@returns ComputeBuffer
---]]
+--[=[
+	Create a ComputeBuffer to store vital information that is then sent to each worker.
+	@since v1.0.0
+	@tag Parallel Unsafe
+
+	@param bufferName string -- The name of the buffer.
+	@return ComputeBuffer
+]=]
 function ComputeLua.CreateComputeBuffer(bufferName: string): ComputeBuffer
 	return ComputeBuffer._new(bufferName)
 end
 
---[[
-	Get the Compute Buffer data, this should only be called within a worker while in parallel
-	
-	@param bufferName The name of the Compute Buffer, this must match whatever the worker is going to use
-	@returns SharedTable The data of the Compute Buffer
---]]
+--[=[
+	Get the ComputeBuffer data
+	@since v1.0.0
+	@tag Serial Unsafe
+
+	@param bufferName string -- The name of the buffer.
+	@return ComputeBufferDataType -- The data of the ComputeBuffer
+]=]
 function ComputeLua.GetComputeBufferData(bufferName: string): SharedTable
 	assert(type(bufferName) == "string", "bufferName must be a string")
 	return SharedTableRegistry:GetSharedTable(SHARED_TABLE_PREFIX..bufferName)
 end
 
---[[
-	Create a thread with a callback, this should only be called within a worker while in parallel
-	
-	@param actor The actor to use, (script:GetActor())
-	@param threadName The name of the thread, this should be unique
-	@param callback The function that will be called when the thread is called
---]]
+--[=[
+	Create a thread for the Dispatcher to execute
+	@since v1.1.0
+	@tag Serial Unsafe
+
+	@param actor Actor -- The Actor to bind the thread to, this should be the same actor as the parent of the worker.
+	@param threadName string -- The unique name of the thread.
+	@param callback (dispatchId: number, variableBuffer: VariableBufferDataType) -> () -- The function that will be executed when the thread is called
+]=]
 function ComputeLua.CreateThread(actor: Actor, threadName: string, callback: (number, VariableBufferDataType) -> ())
 	assert(typeof(actor) == "Instance", "actor must be an Actor")
 	assert(type(threadName) == "string", "threadName must be a string")

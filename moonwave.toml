@@ -1,0 +1,14 @@
+classOrder = [
+	"ComputeLua",
+	"Dispatcher",
+	"ComputeBuffer"
+]
+
+gitSourceBranch = "main"
+
+[home]
+enabled = true
+includeReadme = false
+
+[docusaurus]
+tagline = "Simple library to make Parallel Luau easier with Unity like ComputeBuffers"
