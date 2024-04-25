@@ -254,7 +254,7 @@ function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: strin
 	end
 	assert(type(useSerialDispatch) == "boolean", "useSerialDispatch must be a boolean")
 
-	if not useSerialDispatch then
+	if useSerialDispatch then
 		assert(numThreads <= self.numWorkers, "numThreads cannot exceed numWorkers if using a serial dispatch")
 	end
 
