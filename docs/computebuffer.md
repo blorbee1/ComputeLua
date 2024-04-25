@@ -11,6 +11,7 @@ A Compute Buffer is the way to send big bunches of data to the workers so they c
 To create a Compute Buffer you will just need to call `ComputeLua.CreateComputeBuffer()` with the correct arguments. This will return a ComputeBuffer which can be used to get the complied data and set the data to send over the workers.
 
 `ComputeBuffer:SetData()` This will set the Compute Buffer's data. Make sure your table's data matchs the allowed data types or it will throw an error. This should be called before the Dispatcher is dispatched. If it is called while the workers are working, then you may lose data or the workers will be unable to work correctly.
+
 `ComputeBuffer:GetData()` This will get the data from the Compute Buffer. This should be called after the Dispatcher has dispatched all its threads and the workers have finished otherwise you may get unfinished data.
 
 :::caution

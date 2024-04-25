@@ -12,7 +12,7 @@ To create a Dispatcher you will just need to call `ComputeLua.CreateDispatcher()
 
 `Dispatcher:SetVariableBuffer()` This will set the Variable Buffer's data. Make sure your table's data matchs the allowed data types or it will throw an error. This should be called before the Dispatcher is dispatched. If it is called while the workers are working, then you may lose data or the workers will be unable to work correctly.
 
-:::note
+:::caution
 The Variable Buffer's data is a read-only table. If you try to manually modify it within a worker or a non-worker (outside the `Dispatcher:SetVariableBuffer()` method), it will throw an error.
 :::
 

@@ -8,7 +8,9 @@ A worker is a script that is cloned by the [Dispatcher](dispatcher) which will p
 
 ## Creating a Worker
 
-To create a worker script, disable it so it doesn't run without the Dispatcher cloning it, you just create a new script and pass in that script into the `ComputeLua.CreateDispatcher()` method as the worker template in whatever script is running the Dispatchers.
+To create a worker script, you just create a new script and pass in that script into the `ComputeLua.CreateDispatcher()` method as the worker template in whatever script is running the Dispatchers.
+
+Make sure to disable it so it doesn't run without the Dispatcher cloning it.
 
 This will automatically clone the workers the Dispatcher needs and enable them.
 
@@ -39,8 +41,6 @@ local ComputeLua = require(ReplicatedStorage.ComputeLua)
 To create a thread you simply call `ComputeLua.CreateThread()` with the correct arguments. This will connect a new thread so the Dispatcher knows what function to call when invoking this worker. The thread name should be unique to prevent overlapping functions.
 
 The CreateThread method's last argument is the callback. This is the function that will run for every worker that gets executed. It takes in two parameters, the dispatch ID and the Variable Buffer.
-
-You should keep your Compute Buffers simple, remove nested tables and make everything on the same level. Nested tables will take longer to write to, so keep it short and simple.
 
 ```lua
 ComputeLua.CreateThread(actor, "ThreadName", function(id, variableBuffer)
