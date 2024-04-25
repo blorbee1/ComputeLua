@@ -85,7 +85,7 @@ type DispatcherSelf = {
 	workerFolder: Folder,
 	workers: {Actor},
 	workerRemote: BindableEvent,
-	variableBuffer: VariableBufferDataType,
+	variableBuffer: SharedTable,
 
 	Dispatch: (self: Dispatcher, numThreads: number, thread: string, useSerialDispatch: boolean?) -> Promise,
 	SetVariableBuffer: (self: Dispatcher, bufferData: VariableBufferDataType) -> (),
@@ -261,7 +261,7 @@ function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: strin
 	local workersFinished = 0
 	local timeout = 60
 
-	return Promise.defer(function(res, rej)
+	return Promise.defer(function(res)
 		local timedOut = false
 		local connection = nil
 		task.delay(timeout, function()
@@ -271,7 +271,7 @@ function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: strin
 					connection:Disconnect()
 				end
 				connection = nil
-				rej()
+				res()
 			end
 		end)
 
@@ -279,13 +279,11 @@ function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: strin
 			workersFinished += 1
 		end)
 		
-		local variableBufferShared = SharedTable.cloneAndFreeze(SharedTable.new(self.variableBuffer), true)
-		
 		for i = 1, numThreads do
 			if not useSerialDispatch then
-				self.workers[self.rand:NextInteger(1, self.numWorkers)]:SendMessage(thread, i, self.workerRemote, variableBufferShared)
+				self.workers[self.rand:NextInteger(1, self.numWorkers)]:SendMessage(thread, i, self.workerRemote, self.variableBuffer)
 			else
-				self.workers[i]:SendMessage(thread, i, self.workerRemote, variableBufferShared)
+				self.workers[i]:SendMessage(thread, i, self.workerRemote, self.variableBuffer)
 			end
 		end
 
@@ -313,7 +311,7 @@ end
 ]=]
 function Dispatcher.SetVariableBuffer(self: Dispatcher, bufferData: VariableBufferDataType): ()
 	assert(doesVariableBufferHaveCorrectTyping(bufferData), "variableData must have only elements that are acceptable variable buffer types")
-	self.variableBuffer = bufferData
+	self.variableBuffer = SharedTable.cloneAndFreeze(SharedTable.new(bufferData), true)
 end
 
 --[=[
@@ -496,7 +494,7 @@ function ComputeLua.CreateThread(actor: Actor, threadName: string, callback: (nu
 	assert(type(threadName) == "string", "threadName must be a string")
 	assert(type(callback) == "function", "callback must be a function")
 	assert(actor:IsA("Actor"), "actor must be an Actor instance")
-	
+
 	actor:BindToMessageParallel(threadName, function(
 		id: number, 
 		finishRemote: BindableEvent, 
