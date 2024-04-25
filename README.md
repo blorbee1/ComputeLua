@@ -4,8 +4,6 @@
 
 A simple library to make Parallel Luau easier using Unity like ComputeBuffers with a Dispatcher.
 
-See [Getting Started](gettingstarted) for a guide.
-
 ### Fully Typed
 
 ComputeLua has typing for functions, classes, everything. Every type will be also checked and will throw an error if it is the incorrect type, so double check your types.
