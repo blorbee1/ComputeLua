@@ -1,7 +1,5 @@
 # ComputeLua
 
----
-
 A simple library to make Parallel Luau easier using Unity like ComputeBuffers with a Dispatcher.
 
 ---
