@@ -26,8 +26,8 @@ local numWorkers = 64
 local ComputeLua = require(ReplicatedStorage.ComputeLua)
 local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, workerTemplate)
 ```"><link data-rh="true" rel="canonical" href="https://blorbee1.github.io/ComputeLua/api/Dispatcher"><link data-rh="true" rel="alternate" href="https://blorbee1.github.io/ComputeLua/api/Dispatcher" hreflang="en"><link data-rh="true" rel="alternate" href="https://blorbee1.github.io/ComputeLua/api/Dispatcher" hreflang="x-default"><link rel="stylesheet" href="/ComputeLua/assets/css/styles.fdfd902f.css">
-<link rel="preload" href="/ComputeLua/assets/js/runtime~main.a7f9566b.js" as="script">
-<link rel="preload" href="/ComputeLua/assets/js/main.fbde3c37.js" as="script">
+<link rel="preload" href="/ComputeLua/assets/js/runtime~main.a7028325.js" as="script">
+<link rel="preload" href="/ComputeLua/assets/js/main.e215d442.js" as="script">
 </head>
 <body class="navigation-with-keyboard">
 <script>!function(){function e(e){document.documentElement.setAttribute("data-theme",e)}var t=function(){var e=null;try{e=localStorage.getItem("theme")}catch(e){}return e}();null!==t?e(t):window.matchMedia("(prefers-color-scheme: dark)").matches?e("dark"):(window.matchMedia("(prefers-color-scheme: light)").matches,e("light"))}()</script><div id="__docusaurus">
@@ -58,11 +58,11 @@ local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, workerTemplate)
 <p><strong>NOT RECOMMENDED UNLESS YOU KNOW WHAT YOU ARE DOING</strong> Default to 'true'. This will cause every worker to only be called once.</p>
 </span></span></div></div><code>) → </code><code class="blue_P4bS">Promise</code></div><div>
 <p>Dispatch a number of threads to the workers</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="SetVariableBuffer"><code style="text-decoration:none">SetVariableBuffer</code><a href="#SetVariableBuffer" class="hash-link" aria-label="Direct link to SetVariableBuffer" title="Direct link to SetVariableBuffer">​</a></h3><span class="docTag__6UZ" style="border-color:#79b473;color:#79b473">Parallel Unsafe</span><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->v1.0.0</span><a class="sourceButton_sEho" href="https://github.com/blorbee1/ComputeLua/blob/main/src/init.lua#L314"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Dispatcher<!-- -->.</code><code class="green_DgR4">SetVariableBuffer</code><code>(</code><div class="inset_uKQm"><div><code>self<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/ComputeLua/api/Dispatcher">Dispatcher</a></code><code>,</code></div><div><code>bufferData<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/ComputeLua/api/Dispatcher#VariableBufferDataType">VariableBufferDataType</a></code><span class="inlineDescription_G7Er">-- <span>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="SetVariableBuffer"><code style="text-decoration:none">SetVariableBuffer</code><a href="#SetVariableBuffer" class="hash-link" aria-label="Direct link to SetVariableBuffer" title="Direct link to SetVariableBuffer">​</a></h3><span class="docTag__6UZ" style="border-color:#79b473;color:#79b473">Parallel Unsafe</span><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->v1.0.0</span><a class="sourceButton_sEho" href="https://github.com/blorbee1/ComputeLua/blob/main/src/init.lua#L312"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Dispatcher<!-- -->.</code><code class="green_DgR4">SetVariableBuffer</code><code>(</code><div class="inset_uKQm"><div><code>self<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/ComputeLua/api/Dispatcher">Dispatcher</a></code><code>,</code></div><div><code>bufferData<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/ComputeLua/api/Dispatcher#VariableBufferDataType">VariableBufferDataType</a></code><span class="inlineDescription_G7Er">-- <span>
 <p>The data to set the variable buffer to.</p>
 </span></span></div></div><code>) → </code><code>(</code><code>)</code></div><div>
 <p>Set the data of the SetVariableBuffer for this Dispatcher. Be careful to only call this when no workers are working</p>
-</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Destroy"><code style="text-decoration:none">Destroy</code><a href="#Destroy" class="hash-link" aria-label="Direct link to Destroy" title="Direct link to Destroy">​</a></h3><span class="docTag__6UZ" style="border-color:#79b473;color:#79b473">Parallel Unsafe</span><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->v1.0.0</span><a class="sourceButton_sEho" href="https://github.com/blorbee1/ComputeLua/blob/main/src/init.lua#L324"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Dispatcher<!-- -->.</code><code class="green_DgR4">Destroy</code><code>(</code><code>self<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/ComputeLua/api/Dispatcher">Dispatcher</a></code><code>) → </code><code>(</code><code>)</code></div><div>
+</div><div class="divider_rE5g"></div><h3 class="anchor anchorWithStickyNavbar_LWe7" id="Destroy"><code style="text-decoration:none">Destroy</code><a href="#Destroy" class="hash-link" aria-label="Direct link to Destroy" title="Direct link to Destroy">​</a></h3><span class="docTag__6UZ" style="border-color:#79b473;color:#79b473">Parallel Unsafe</span><div class="repositoryDetailsContainer_BPdw"><span class="releaseVersion_EonW">since <!-- -->v1.0.0</span><a class="sourceButton_sEho" href="https://github.com/blorbee1/ComputeLua/blob/main/src/init.lua#L322"><div class="sourceButtonText_Vh0m">&lt;/&gt;</div></a></div><div class="memberString_GwaU"><code>Dispatcher<!-- -->.</code><code class="green_DgR4">Destroy</code><code>(</code><code>self<!-- -->: </code><code class="blue_P4bS"><a style="text-decoration:underline;color:inherit" href="/ComputeLua/api/Dispatcher">Dispatcher</a></code><code>) → </code><code>(</code><code>)</code></div><div>
 <p>The cleanup function for a Dispatcher. This is important to call to free up memory</p>
 </div></div></article></div><details><summary>Show raw api</summary><pre style="max-width:100%;white-space:pre-wrap">{
     &quot;functions&quot;: [
@@ -161,7 +161,7 @@ local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, workerTemplate)
             ],
             &quot;since&quot;: &quot;v1.0.0&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 314,
+                &quot;line&quot;: 312,
                 &quot;path&quot;: &quot;src/init.lua&quot;
             }
         },
@@ -182,7 +182,7 @@ local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, workerTemplate)
             ],
             &quot;since&quot;: &quot;v1.0.0&quot;,
             &quot;source&quot;: {
-                &quot;line&quot;: 324,
+                &quot;line&quot;: 322,
                 &quot;path&quot;: &quot;src/init.lua&quot;
             }
         }
@@ -281,7 +281,7 @@ local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, workerTemplate)
         &quot;path&quot;: &quot;src/init.lua&quot;
     }
 }</pre></details></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#types" class="table-of-contents__link toc-highlight">Types</a><ul><li><a href="#BufferDataType" class="table-of-contents__link toc-highlight">BufferDataType</a></li><li><a href="#VariableBufferDataType" class="table-of-contents__link toc-highlight">VariableBufferDataType</a></li></ul></li><li><a href="#properties" class="table-of-contents__link toc-highlight">Properties</a><ul><li><a href="#numWorkers" class="table-of-contents__link toc-highlight">numWorkers</a></li></ul></li><li><a href="#functions" class="table-of-contents__link toc-highlight">Functions</a><ul><li><a href="#Destroy" class="table-of-contents__link toc-highlight">.Destroy</a></li><li><a href="#Dispatch" class="table-of-contents__link toc-highlight">.Dispatch</a></li><li><a href="#SetVariableBuffer" class="table-of-contents__link toc-highlight">.SetVariableBuffer</a></li></ul></li></ul></div></div></div></div></main></div></div><footer class="footer footer--dark"><div class="container container-fluid"><div class="footer__bottom text--center"><div class="footer__copyright">Copyright © 2024 blorbee1. Built with Moonwave and Docusaurus.</div></div></div></footer></div>
-<script src="/ComputeLua/assets/js/runtime~main.a7f9566b.js"></script>
-<script src="/ComputeLua/assets/js/main.fbde3c37.js"></script>
+<script src="/ComputeLua/assets/js/runtime~main.a7028325.js"></script>
+<script src="/ComputeLua/assets/js/main.e215d442.js"></script>
 </body>
 </html>
