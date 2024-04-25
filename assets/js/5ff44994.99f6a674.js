@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdocs=self.webpackChunkdocs||[]).push([[849],{63891:e=>{e.exports=JSON.parse('{"sourceUrl":"https://github.com/blorbee1/ComputeLua/blob/main","baseUrl":"/ComputeLua/","classOrder":["ComputeLua","Dispatcher","ComputeBuffer"],"apiCategories":[]}')}}]);
