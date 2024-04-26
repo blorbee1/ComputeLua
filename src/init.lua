@@ -1,6 +1,6 @@
 -- ComputeLua
 -- blorbee
--- Stable Release (1.1.0) - 4/24/2024
+-- Stable Release (1.1.1) - 4/26/2024
 
 local SharedTableRegistry = game:GetService("SharedTableRegistry")
 
@@ -279,12 +279,15 @@ function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: strin
 			workersFinished += 1
 		end)
 		
+		local batchSize = 50
 		for i = 1, numThreads do
 			if not useSerialDispatch then
-				self.workers[self.rand:NextInteger(1, self.numWorkers)]:SendMessage(thread, i, self.workerRemote, self.variableBuffer)
+				self.workers[self.rand:NextInteger(1, self.numWorkers)]:SendMessage(thread, i, batchSize, self.workerRemote, self.variableBuffer)
 			else
-				self.workers[i]:SendMessage(thread, i, self.workerRemote, self.variableBuffer)
+				self.workers[i]:SendMessage(thread, i, batchSize, self.workerRemote, self.variableBuffer)
 			end
+			
+			i = math.min(i + batchSize, numThreads)
 		end
 
 		repeat
@@ -496,11 +499,15 @@ function ComputeLua.CreateThread(actor: Actor, threadName: string, callback: (nu
 	assert(actor:IsA("Actor"), "actor must be an Actor instance")
 
 	actor:BindToMessageParallel(threadName, function(
-		id: number, 
+		startDispatchId: number, 
+		batchSize: number,
 		finishRemote: BindableEvent, 
 		variableBuffer: ComputeLua.VariableBufferDataType
 	)
-		callback(id, variableBuffer)
+		local dispatchId = startDispatchId
+		for i = dispatchId, batchSize do
+			callback(i, variableBuffer)
+		end
 		finishRemote:Fire()
 	end)
 end
