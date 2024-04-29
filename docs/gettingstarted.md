@@ -230,11 +230,12 @@ end)
 
 ### Dispatching
 
-Now it's time to execute your workers. You can do this my dispatching your Dispatcher by running `Dispatcher:Dispatch()`. This takes in two required arguments and one optional.
+Now it's time to execute your workers. You can do this by dispatching your Dispatcher by running `Dispatcher:Dispatch()`. This takes in two required arguments and one optional.
 
 - **numThreads** --  How many workers will be invoked to run their code. If using serial dispatch, this cannot exceed the number of workers. Try to match the size of data you are going to process if you are not using a serial dispatch.
 - **thread** -- The name of the thread to execute.
-- **useSerialDispatch** -- (optional) Default to 'true' **NOT RECOMMENDED UNLESS YOU KNOW WHAT YOU ARE DOING**. This will cause every worker to only be called once.
+- **batchSize** -- (optional) Defaults to '50'. This will determine how many items each thread will work on. If this is 1 it will be one item per worker per thread
+- **useSerialDispatch** -- (optional) Defaults to 'true' **NOT RECOMMENDED UNLESS YOU KNOW WHAT YOU ARE DOING**. This will cause every worker to only be called once.
 
 The Dispatch method will return a Promise. You can either await this promise, which will yield the current thread, or you could use `:andThen()` which will run the function passed after the Promise is resolved, this is what is recommended.
 

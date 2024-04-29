@@ -243,16 +243,28 @@ end
 
 	@param numThreads number -- How many workers will be invoked to run their code. If using serial dispatch, this cannot exceed the number of workers. Try to match the size of data you are going to process if you are not using a serial dispatch.
 	@param thread string -- The name of the thread to dispatch, this is the same name as the one in the workers
+	@param batchSize number -- The amount of items a worker will work on per thread. If this number is 1 then each worker execution will work on one item. Defaults to 50 (Recommended)
 	@param useSerialDispatch boolean? -- **NOT RECOMMENDED UNLESS YOU KNOW WHAT YOU ARE DOING** Default to 'true'. This will cause every worker to only be called once.
 	@return Promise
 ]=]
-function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: string, useSerialDispatch: boolean?): Promise
+function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: string, batchSize: number?, useSerialDispatch: boolean?): Promise
 	assert(type(numThreads) == "number", "numThreads must be a number")
+	assert(numThreads > 0, "batchSize must be greater than 0")
 	assert(type(thread) == "string", "thread must be a string")
 	if useSerialDispatch == nil then
 		useSerialDispatch = false
 	end
 	assert(type(useSerialDispatch) == "boolean", "useSerialDispatch must be a boolean")
+	if batchSize == nil then
+		batchSize = 50
+	end
+	assert(type(batchSize) == "number", "batchSize must be a number")
+	assert(batchSize > 0, "batchSize must be greater than 0")
+	batchSize = math.ceil(batchSize)
+
+	if batchSize < numThreads then
+		batchSize = 1
+	end
 
 	if useSerialDispatch then
 		assert(numThreads <= self.numWorkers, "numThreads cannot exceed numWorkers if using a serial dispatch")
@@ -279,7 +291,6 @@ function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: strin
 			workersFinished += 1
 		end)
 		
-		local batchSize = 50
 		for i = 1, numThreads do
 			if not useSerialDispatch then
 				self.workers[self.rand:NextInteger(1, self.numWorkers)]:SendMessage(thread, i, batchSize, self.workerRemote, self.variableBuffer)
@@ -504,8 +515,7 @@ function ComputeLua.CreateThread(actor: Actor, threadName: string, callback: (nu
 		finishRemote: BindableEvent, 
 		variableBuffer: ComputeLua.VariableBufferDataType
 	)
-		local dispatchId = startDispatchId
-		for i = dispatchId, batchSize do
+		for i = startDispatchId, startDispatchId + (batchSize - 1) do
 			callback(i, variableBuffer)
 		end
 		finishRemote:Fire()
