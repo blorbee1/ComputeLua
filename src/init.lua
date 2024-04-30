@@ -87,7 +87,7 @@ type DispatcherSelf = {
 	workerRemote: BindableEvent,
 	variableBuffer: SharedTable,
 
-	Dispatch: (self: Dispatcher, numThreads: number, thread: string, useSerialDispatch: boolean?) -> Promise,
+	Dispatch: (self: Dispatcher, numThreads: number, thread: string,  batchSize: number?, useSerialDispatch: boolean?) -> Promise,
 	SetVariableBuffer: (self: Dispatcher, bufferData: VariableBufferDataType) -> (),
 	Destroy: (self: Dispatcher) -> ()
 }
