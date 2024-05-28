@@ -115,11 +115,8 @@ local ComputeLua = require(ReplicatedStorage.ComputeLua)
 
 ComputeLua.CreateThread(actor, "CalculatePositions", function(id, variableBuffer)
 	local PositionBuffer = ComputeLua.GetComputeBufferData("PositionBuffer")
-	local numPositions = variableBuffer[1] -- Get the first index of the variable buffer, which in this case is the size of the PositionBuffer
 
-	for i = 1, numPositions do
-		local position = PositionBuffer[i]
-		PositionBuffer[i] = math.nosie(position.x, position.y, position.z)
-	end
+	local position = PositionBuffer[id]
+	PositionBuffer[id] = math.nosie(position.x, position.y, position.z)
 end)
 ```
