@@ -1,6 +1,6 @@
 -- ComputeLua
 -- blorbee
--- Stable Release (1.1.1) - 4/26/2024
+-- Stable Release (1.2.1) - 5/29/2024
 
 local SharedTableRegistry = game:GetService("SharedTableRegistry")
 
@@ -249,7 +249,10 @@ end
 ]=]
 function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: string, batchSize: number?, useSerialDispatch: boolean?): Promise
 	assert(type(numThreads) == "number", "numThreads must be a number")
-	assert(numThreads > 0, "batchSize must be greater than 0")
+	if numThreads <= 0 then
+		warn("numThreads must be greater than 0")
+		return Promise.reject()
+	end
 	assert(type(thread) == "string", "thread must be a string")
 	if useSerialDispatch == nil then
 		useSerialDispatch = false
@@ -290,14 +293,14 @@ function Dispatcher.Dispatch(self: Dispatcher, numThreads: number, thread: strin
 		connection = self.workerRemote.Event:Connect(function()
 			workersFinished += 1
 		end)
-		
+
 		for i = 1, numThreads do
 			if not useSerialDispatch then
 				self.workers[self.rand:NextInteger(1, self.numWorkers)]:SendMessage(thread, i, batchSize, self.workerRemote, self.variableBuffer)
 			else
 				self.workers[i]:SendMessage(thread, i, batchSize, self.workerRemote, self.variableBuffer)
 			end
-			
+
 			i = math.min(i + batchSize, numThreads)
 		end
 
@@ -415,7 +418,7 @@ end
 ]=]
 function ComputeBuffer.GetData(self: ComputeBuffer): SharedTable
 	local data = SharedTableRegistry:GetSharedTable(self._bufferName)
-	return SharedTable.cloneAndFreeze(data, true)
+	return data
 end
 
 --[=[
