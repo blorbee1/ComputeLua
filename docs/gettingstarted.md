@@ -36,11 +36,12 @@ You are going to need a worker template, so, for now, let's create a blank scrip
 ```lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local workerTemplate = script.Worker
-local numWorkers = 64
-
 local ComputeLua = require(ReplicatedStorage.ComputeLua)
-local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, workerTemplate)
+
+local worker = script.Worker
+local numWorkers = 256
+
+local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, worker)
 ```
 
 :::caution
@@ -50,28 +51,30 @@ Make sure they are able to run in their current location.
 
 ---
 
-### Compute Buffers
+### ComputeBuffers
 
-Compute Buffers are just a large table of items that are sent over to the workers so they can edit them and send them back. This is how you can send data back and forth between the main thread and the workers.
+ComputeBuffers are the main way to send bulks of data for the workers to process and spit out a result. They are really just very large tables of elements.
 
-To create a Compute Buffer, all you need to call is the `ComputeLua.CreateComputeBuffer()` method. This method takes in one parameter.
+To create a ComputeBuffer, all you need to call is the `Dispatcher.SetComputeBuffer()` method, this method takes in two parameters
 
-- **bufferName** -- What is the name of this buffer? It should be unique to prevent data loss when getting the data back.
+- **bufferName** -- What is the name of this buffer? If you name two buffers the same name, they will override their data
+- **bufferData** -- What is the data of this buffer? This is the large table of elements which was said before
 
 ```lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local ComputeLua = require(ReplicatedStorage.ComputeLua)
 
-local PositionBuffer = ComputeLua.CreateComputeBuffer("PositionBuffer")
+local worker = script.Worker
+local numWorkers = 256
+
+local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, worker)
+
+Dispatcher:SetComputeBuffer("buffer", table.create(8192, 2))
 ```
 
-Next you would want to set the data of the Compute Buffer. You can set the data of the buffer by running `ComputeBuffer:SetData()`. This takes in one parameter.
-
-- **bufferData** -- A table of the data you want to set this buffer to have.
-
-:::caution Compute Buffers can only have certain data types
-Buffer data is limited due to limitations in Roblox
+:::danger 
+**ComputeBuffers can only have certain data types**
 
 - First, the keys of the data must only be numbers, this will allow fast and effective sending of the data.
 - Second, the only data types allowed for the data are:
@@ -109,75 +112,15 @@ Buffer data is limited due to limitations in Roblox
 ```
 :::
 
-```lua
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local ComputeLua = require(ReplicatedStorage.ComputeLua)
-
-local PositionBuffer = ComputeLua.CreateComputeBuffer("PositionBuffer")
-PositionBuffer:SetData({
-	Vector3.zero,
-	Vector3.new(5, 1, 2),
-	Vector3.yAxis,
-	Vector3.zAxis
-})
-```
-
-Finally, you probably want the compiled data from the Compute Buffer after the Dispatcher has dispatched and the workers are finished.
-
-You can easily get this by running `ComputeBuffer:GetData()`. This will return a **read-only** table of all the data the workers have made together.
-
-```lua
-local result = PositionBuffer:GetData()
-```
+If you ever wish to change the data in a ComputeBuffer that was already made. Then, just call the `Dispatcher.SetComputeBuffer()` method again and it will override the data.
 
 ---
 
-### Variable Buffer
+### Workers
 
-Just like Compute Buffers, there is a Variable Buffer. This is unique however, this buffer cannot be edited by any worker and it is passed in through the parameters of the thread callback function. 
+Workers are the brain of the operation. They are what is actually running the code and processing the data.
 
-You can use this buffer to set constant variables that the workers will need to be able to use, for example:
-- Size of the map
-- Size of a Compute Buffer's data
-- Constant variable for a function
-
-To set the data of this Variable Buffer, you call `Dispatcher:SetVariableBuffer()`. This takes in one parameter
-
-- **bufferData** - A table of the data you want to set this buffer to have.
-
-:::caution The Variable Buffer can only have certain data types
-The limited data types are exactly the same to Compute Buffers, except you cannot have nested tables with the Variable Buffer
-:::
-:::tip The Variable Buffer is not Compute Buffers
-The Variable Buffer was not made to act like a Compute Buffer. You should not place a lot of information into it (by a lot of information, I mean over 1,000 elements)
-
-Use a Compute Buffer if you need a lot of data sent over.
-:::
-
-```lua
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local workerTemplate = script.Worker
-local numWorkers = 64
-
-local ComputeLua = require(ReplicatedStorage.ComputeLua)
-local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, workerTemplate)
-
-Dispatcher:SetVariableBuffer({
-	15,
-	Vector3.zero,
-	false,
-	"string",
-	CFrame.new()
-})
-```
-
----
-
-### Worker Script
-
-Worker scripts are very simple. Firstly, you will need to check if the current script is running in an actor. This is to make sure that this script can run in parallel.
+First, you will need to check if the current script is running in an actor, this is to make sure that this script can run in parallel.
 
 ```lua
 local actor = script:GetActor()
@@ -203,13 +146,7 @@ end
 local ComputeLua = require(ReplicatedStorage.ComputeLua)
 ```
 
-Finally, the last thing you need to do is create a thread. You can easily create a thread by running `ComputeLua.CreateThread()`. This takes in three parameters
-
-- **actor** -- ComputeLua needs this to keep track of the workers
-- **threadName** -- This should be unique to prevent overlap.
-- **callback** -- This is a function that is called when the thread is executed. It takes in two parameters.
-	- **id** -- This is the dispatch ID. You can easily use the dispatch ID to focus on one value within Compute Buffers.
-	- **variableBuffer** -- The read-only table which is the data from the Variable Buffer.
+Now, you want to get the data key's of every ComputeBuffer to reference them later. In this example the only ComputeBuffer we have is called "buffer", so you get the key by calling `ComputeLua.GetBufferDataKey()`
 
 ```lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -221,8 +158,78 @@ end
 
 local ComputeLua = require(ReplicatedStorage.ComputeLua)
 
-ComputeLua.CreateThread(actor, "CalculatePositions", function(id, variableBuffer)
-	local value = variableBuffer[1] -- Get the first variable within the Variable Buffer
+local BUFFER_KEY = ComputeLua.GetBufferDataKey("buffer")
+```
+
+Finally, the last thing you need to do is create a thread. You can easily create a thread by running `ComputeLua.CreateThread()`. This takes in three parameters
+
+- **actor** -- ComputeLua needs this to keep track of the workers
+- **threadName** -- This should be unique to prevent overlap.
+- **callback** -- This is a function that is called when the thread is executed. It takes in two parameters.
+	- **id** -- This is the dispatch ID. You can easily use the dispatch ID to focus on one value within Compute Buffers.
+	- **bufferData** -- The massive table containing all your buffer data
+
+```lua
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local actor = script:GetActor()
+if actor == nil then
+	return
+end
+
+local ComputeLua = require(ReplicatedStorage.ComputeLua)
+
+local BUFFER_KEY = ComputeLua.GetBufferDataKey("buffer")
+
+ComputeLua.CreateThread(actor, "ProcessSquareRoot", function(id: number, bufferData: SharedTable)
+	
+end)
+```
+
+Now to get the data of the buffer you want, you want to first find the data for that buffer by indexing `bufferData` with the buffer's key
+
+Then, if your buffers are configured correctly then the index in that buffer's data of the data you wish to edit will be the dispatch's ID, in our case is the variable `id`. So, index the buffer's data with the dispatch ID
+
+```lua
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local actor = script:GetActor()
+if actor == nil then
+	return
+end
+
+local ComputeLua = require(ReplicatedStorage.ComputeLua)
+
+local BUFFER_KEY = ComputeLua.GetBufferDataKey("buffer")
+
+ComputeLua.CreateThread(actor, "ProcessSquareRoot", function(id: number, bufferData: SharedTable)
+	local value = bufferData[BUFFER_KEY][id]
+end)
+```
+
+Finally, once you are done processing your data you must return a value (if no value is returned, an error is raised). In this case, we will simply run `math.sqrt()` on it
+
+But, ComputeLua needs to know what ComputeBuffer this value was assigned to so it can reassign it back, so you are required to return a table. 
+
+How it works is by one element equals two indices in the table. The first index is the buffer's key and the second one is the data. For example, in our case we only have one ComputeBuffer so the returning table will be `{BUFFER_1_KEY, data_1}`. But, if you had three ComputeBuffers and edited all of them, then your returning table would be `{BUFFER_1_KEY, data_1, BUFFER_2_KEY, data_2, BUFFER_3_KEY, data_3}`
+
+So filling in the values, our returning table will be `{BUFFER_KEY, math.sqrt(value)}`
+
+```lua
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local actor = script:GetActor()
+if actor == nil then
+	return
+end
+
+local ComputeLua = require(ReplicatedStorage.ComputeLua)
+
+local BUFFER_KEY = ComputeLua.GetBufferDataKey("buffer")
+
+ComputeLua.CreateThread(actor, "ProcessSquareRoot", function(id: number, bufferData: SharedTable)
+	local value = bufferData[BUFFER_KEY][id]
+	return {BUFFER_KEY, math.sqrt(value)}
 end)
 ```
 
@@ -232,37 +239,44 @@ end)
 
 Now it's time to execute your workers. You can do this by dispatching your Dispatcher by running `Dispatcher:Dispatch()`. This takes in two required arguments and one optional.
 
-- **numThreads** --  How many workers will be invoked to run their code. If using serial dispatch, this cannot exceed the number of workers. Try to match the size of data you are going to process if you are not using a serial dispatch.
-- **thread** -- The name of the thread to execute.
-- **batchSize** -- (optional) Defaults to '50'. This will determine how many items each thread will work on. If this is 1 it will be one item per worker per thread
-- **useSerialDispatch** -- (optional) Defaults to 'true' **NOT RECOMMENDED UNLESS YOU KNOW WHAT YOU ARE DOING**. This will cause every worker to only be called once.
+- **thread** -- The name of the thread to dispatch, this is the same name as the one in the worker
+- **numThreads** -- How many times of this thread should be calling
+- **overridebatchSize** -- (optional) (NOT RECOMMENDED) override the default batch size
 
 The Dispatch method will return a Promise. You can either await this promise, which will yield the current thread, or you could use `:andThen()` which will run the function passed after the Promise is resolved, this is what is recommended.
 
+The resulting data works like this, it is the same massive table that the workers were given but now with the new data!
+
+You will need to use `ComputeLua.GetBufferDataKey()` to get the index of the buffer you want to access, from there it is just the dispatch's ID starting at 1
+
 ```lua
-Dispatcher:Dispatch(4, "CalculatePositions"):andThen(function()
-	local data = PositionBuffer:GetData()
-	print("starting data:")
-	print({
-		Vector3.zero,
-		Vector3.new(5, 1, 2),
-		Vector3.yAxis,
-		Vector3.zAxis
-	})
-	print("resulting data:")
-	print(data)
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local ComputeLua = require(ReplicatedStorage.ComputeLua)
+
+local worker = script.Worker
+local numWorkers = 256
+
+local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, worker)
+
+Dispatcher:SetComputeBuffer("buffer", table.create(8192, 2))
+
+local BUFFER_KEY = ComputeLua.GetBufferDataKey("buffer")
+Dispatcher:Dispatch("ProcessSquareRoot", 8192):andThen(function(data: {[number]: {ComputeBufferDataType}})
+	local bufferData = data[BUFFER_KEY]
 end)
 ```
+
+From here you can do whatever you wish with the data
 
 ---
 
 ### Cleaning Up
 
-Make sure to clean up your Compute Buffers and Dispactchers by calling their respective clean up function. 
+Finally, Dispatchers take up memory and if you don't get rid of them after you are done using them then problems will occur.
 
-This will free up all the memory they are using and get rid of all the worker script clones.
+Simply call the `Dispatcher:Destroy()` method to get rid of your Dispatcher
 
 ```lua
 Dispacther:Destroy()
-ComputeBuffer:Clean()
 ```

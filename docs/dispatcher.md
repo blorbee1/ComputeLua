@@ -4,17 +4,19 @@ sidebar_position: 3
 
 # Dispatcher
 
-The Dispatcher is the main class that will handle all the workers and threads. You can multiple Dispatchers if you want, but they will have their own workers.
+A Dispatcher is the one in charge of everything. It is the one holding the data from your ComputeBuffers and sending those off to the many many workers it has to process them.
+
+Multiple Dispatchers can be made, as many as you want.
+
+Below is a more detailed explaination about Dispatchers compared to [Getting Started](gettingstarted)
 
 ## Creating a Dispatcher
 
-To create a Dispatcher you will just need to call `ComputeLua.CreateDispatcher()` with the correct arguments. This will return a Dispatcher which can be used to dispatch a thread or update the Variable Buffer.
+To create a Dispatcher you will just need to call `ComputeLua.CreateDispatcher()` with the correct arguments. This will return a Dispatcher which can be used to dispatch a thread or create/set ComputeBuffers
 
-`Dispatcher:SetVariableBuffer()` This will set the Variable Buffer's data. Make sure your table's data matchs the allowed data types or it will throw an error. This should be called before the Dispatcher is dispatched. If it is called while the workers are working, then you may lose data or the workers will be unable to work correctly.
+`Dispatcher:SetComputeBuffer()` This will set a ComputeBuffer's data. If that certain ComputeBuffer does not exist, then it will create it.
 
-:::caution
-The Variable Buffer's data is a read-only table. If you try to manually modify it within a worker or a non-worker (outside the `Dispatcher:SetVariableBuffer()` method), it will throw an error.
-:::
+`Dispatcher:DestroyComputeBuffer()` This will delete a ComputeBuffer's data. Just a simple cleanup function.
 
 ---
 
@@ -22,7 +24,7 @@ The Variable Buffer's data is a read-only table. If you try to manually modify i
 
 Dispatching a thread is very simple. All you need to do is call `Dispatcher:Dispatch()` with the correct arguments. This will return a Promise so you can process that Promise as you please.
 
-Once the Promise is resolved, then it is safe to get the data from the Compute Buffers if you have any. Before the Promise is resolved, that you may get unfinished data or just the original data.
+Once the Promise is resolved, it will return the resulting data that the workers worked on
 
 ---
 
@@ -31,22 +33,17 @@ Once the Promise is resolved, then it is safe to get the data from the Compute B
 ```lua
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local workerTemplate = script.Worker
-local numWorkers = 128 -- I want to have a total worker count of 128
-
 local ComputeLua = require(ReplicatedStorage.ComputeLua)
-local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, workerTemplate)
 
-local PositionBuffer = ComputeLua.CreateComputeBuffer("PositionBuffer")
-local startingData = table.create(64, Vector3.zero) -- This will precreate a table with 64 elements all with Vector3.zero as the value
+local worker = script.Worker
+local numWorkers = 256
 
-PositionBuffer:SetData(startingData)
+local Dispatcher = ComputeLua.CreateDispatcher(numWorkers, worker)
 
-Dispatcher:Dispatch(64, "CalculatePositions"):andThen(function()
-	local data = PositionBuffer:GetData() -- Get the data back from the PositionBuffer which should have all the new positions
-	print("Starting data:")
-	print(startingData)
-	print("Resulting data:")
-	print(data)
+Dispatcher:SetComputeBuffer("buffer", table.create(8192, 2))
+
+local BUFFER_KEY = ComputeLua.GetBufferDataKey("buffer")
+Dispatcher:Dispatch("ProcessSquareRoot", 8192):andThen(function(data: {[number]: {ComputeBufferDataType}})
+	local bufferData = data[BUFFER_KEY]
 end)
 ```

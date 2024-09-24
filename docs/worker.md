@@ -40,64 +40,26 @@ local ComputeLua = require(ReplicatedStorage.ComputeLua)
 
 To create a thread you simply call `ComputeLua.CreateThread()` with the correct arguments. This will connect a new thread so the Dispatcher knows what function to call when invoking this worker. The thread name should be unique to prevent overlapping functions.
 
-The CreateThread method's last argument is the callback. This is the function that will run for every worker that gets executed. It takes in two parameters, the dispatch ID and the Variable Buffer.
+The CreateThread method's last argument is the callback. This is the function that will run for every worker that gets executed. It takes in two parameters, the dispatch ID and the buffer data.
 
 ```lua
-ComputeLua.CreateThread(actor, "ThreadName", function(id, variableBuffer)
+ComputeLua.CreateThread(actor, "ProcessSquareRoot", function(id: number, bufferData: SharedTable)
 	
 end)
 ```
 
 The dispatch ID (id) is the current ID of the worker, this starts at 1 and ends at how many threads that the Dispatcher is executing.
 
-The Variable Buffer (variableBuffer) is the data of the Variable Buffer you assigned to the Dispatcher.
+The buffer data (bufferData) is the massive table of data that the ComputeBuffers are put into. This is where you get everything you need to process.
 
-:::caution The Variable Buffer is read-only
-If you attempt to edit the Variable Buffer, it will throw an error.
-:::
-
----
-
-## Getting Compute Buffer data
-
-`ComputeLua.GetComputeBufferData()` is the way to get the data of a Compute Buffer, it takes in the name of the buffer.
-
-`ComputeLua.GetComputeBufferData()` will return a **SharedTable**. The SharedTable means that there is a different way to iterate through the table. You can no longer use `ipairs` or `pairs`, you must use `in table` to iterate through it. But theres a catch, Roblox will shallow clone the SharedTable whenever you iterate through it; therefore no edits you make to it will apply. Due to this, if you need to loop through a Compute Buffer's data in a worker; you should supply the size of the table in the Variable Buffers so you can use a range loop.
+To get a certain ComputeBuffer within the buffer data, you will first need the key of it. You can get this key by running `ComputeLua.GetBufferDataKey()` with the name of the ComputeBuffer. Now simply index the buffer data table with that key to get the data for that buffer. It is recommended that you get the buffer's key outside of the thread function since that will be called many times so no need to ask for the key every time.
 
 ```lua
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
-local actor = script:GetActor()
-if actor == nil then
-	return
-end
-
-local ComputeLua = require(ReplicatedStorage.ComputeLua)
-
-ComputeLua.CreateThread(actor, "ThreadName", function(id, variableBuffer)
-	local bufferData = ComputeLua.GetComputeBufferData("ComputeBuffer")
-	local bufferSize = variableBuffer[1]
-
-	for i = 1, bufferSize do
-		-- Since I'm using a range loop, I am able to make changes to the data and have it update the table
-		bufferData[i] = 5
-	end
-
-	for i, v in bufferData do
-		-- Since this is a 'in' loop, any edits will not apply to the bufferData
-		bufferData[i] = 10
-	end
+local BUFFER_KEY = ComputeLua.GetBufferDataKey("buffer")
+ComputeLua.CreateThread(actor, "ProcessSquareRoot", function(id: number, bufferData: SharedTable)
+	local data = bufferData[BUFFER_KEY]
 end)
-
--- What gets returned to the Dispatcher:
--- All bufferData values equal 5
 ```
-
-You can use the dispatch ID to easily access the current data the current worker instance is working on. All you do is just index the Compute Buffer's data with the dispatch ID and you will get the data the worker is working on.
-
-:::tip
-If the number of threads executed is greater than the size of the data of the Compute Buffer, then the workers may receive `nil` data near the end of the execution
-:::
 
 ---
 
@@ -113,10 +75,11 @@ end
 
 local ComputeLua = require(ReplicatedStorage.ComputeLua)
 
-ComputeLua.CreateThread(actor, "CalculatePositions", function(id, variableBuffer)
-	local PositionBuffer = ComputeLua.GetComputeBufferData("PositionBuffer")
+local POSITION_BUFFER_KEY = ComputeLua.GetBufferDataKey("PositionBuffer")
+ComputeLua.CreateThread(actor, "CalculateNoise", function(id: number, bufferData: SharedTable)
+	local PositionBuffer = bufferData[POSITION_BUFFER_KEY]
 
 	local position = PositionBuffer[id]
-	PositionBuffer[id] = math.nosie(position.x, position.y, position.z)
+	return math.nosie(position.x, position.y, position.z)
 end)
 ```

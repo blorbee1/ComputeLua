@@ -1,7 +1,6 @@
 classOrder = [
 	"ComputeLua",
-	"Dispatcher",
-	"ComputeBuffer"
+	"Dispatcher"
 ]
 
 gitSourceBranch = "main"
