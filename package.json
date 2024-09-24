@@ -1,7 +1,7 @@
 {
   "dependencies": {
-    "@docusaurus/core": "^3.2.1",
-    "@docusaurus/preset-classic": "^3.2.1",
-    "moonwave": "^1.1.2"
+    "@docusaurus/core": "^3.5.2",
+    "@docusaurus/preset-classic": "^3.5.2",
+    "moonwave": "^1.1.3"
   }
 }
