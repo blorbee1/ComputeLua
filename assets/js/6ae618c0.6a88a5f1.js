@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkdocs=self.webpackChunkdocs||[]).push([[326],{7636:e=>{e.exports=JSON.parse('[{"type":"link","href":"/api/ComputeLua","label":"\u200bCompute\u200bLua"},{"type":"link","href":"/api/Dispatcher","label":"\u200bDispatcher"}]')}}]);
